@@ -18,7 +18,7 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
-__data_dir__ = 'Z:/Topolux/Data'
+__data_dir__ = r'Z:\Topolux\Data'
 
 def listdir(thedir):
     if thedir and os.path.isdir(thedir):
@@ -165,7 +165,7 @@ def update_fig(file_dataset, x, y):
     cmd = ""
     for f1 in files:
         with h5py.File(f1,'r') as h5file:
-            cmd += f"with h5py.File('{f1}','r') as h5file:\n"
+            cmd += f"with h5py.File(r'{f1}','r') as h5file:\n"
             for f2,ds in file_dataset:
                 if f1==f2:
                     name = ds if len(files)==1 else '{0} {1}'.format(os.path.splitext(os.path.basename(f1))[0],ds)
@@ -177,8 +177,9 @@ def update_fig(file_dataset, x, y):
     cmd += "fig,ax = subplots()\n"
     for plot in cmd_plot:
         cmd += "ax.plot({x},{y},label='{label}')\n".format(**plot)
-    cmd += f"ax.set_xlabel('{x}')\nax.set_ylabel('{y}')\nlegend()\n"
     title =  os.path.relpath(files[0],__data_dir__) + ' ' + ' '.join([os.path.basename(f) for f in files[1:]])
+    #cmd += f"ax.set_xlabel('{x}')\nax.set_ylabel('{y}')\nlegend()\nax.set_title(r'{title}')\nfig.tight_layout()"
+    cmd += f"ax.set_xlabel('{x}')\nax.set_ylabel('{y}')\nlegend()"
     return {'data':data , 'layout' : {'title' : title , 'xaxis' : {'title': x}, 'yaxis' : { 'title':  y}}}, cmd
 
 @app.callback(Output('table','columns'),
