@@ -73,6 +73,13 @@ app.layout = html.Div([
     ),
     ], style={'columnCount': 2}),
     dcc.Graph(id="main-graph"),
+    dcc.ConfirmDialogProvider(
+        children=html.Button(
+            'Code',
+        ),
+        id='clipboard',
+        message=''
+    ),
     html.H3(id='attrs'),
     dash_table.DataTable(id='table'),
     html.H3('')
@@ -143,24 +150,36 @@ def update_vars(file_dataset, prev_x, prev_y):
     return options, options, value_x, value_y
 
 @app.callback(Output('main-graph','figure'),
+              Output('clipboard', 'message'),
               Input('dropdown-dataset', 'value'),
               Input('dropdown-x', 'value'),
               Input('dropdown-y', 'value'),
               )
 def update_fig(file_dataset, x, y):
     if file_dataset is None or len(file_dataset)==0 or x is None or y is None:
-        return {'data':[{'x': [], 'y': [], 'type': 'line', 'name': None}] , 'layout' : {'title' : '' , 'xaxis' : {'title': ''}, 'yaxis' : { 'title':  ''}}}
+        return {'data':[{'x': [], 'y': [], 'type': 'line', 'name': None}] , 'layout' : {'title' : '' , 'xaxis' : {'title': ''}, 'yaxis' : { 'title':  ''}}}, ""
     file_dataset = [json.loads(f) for f in file_dataset]
     data = []
     files = list(set([ f for f,ds in file_dataset]))
+    cmd_plot = []
+    cmd = ""
     for f1 in files:
         with h5py.File(f1,'r') as h5file:
+            cmd += f"with h5py.File('{f1}','r') as h5file:\n"
             for f2,ds in file_dataset:
                 if f1==f2:
                     name = ds if len(files)==1 else '{0} {1}'.format(os.path.splitext(os.path.basename(f1))[0],ds)
-                    data.append( {'x': np.array(h5file[ds][x]), 'y': np.array(h5file[ds][y]), 'type': 'line', 'name': name} )  
+                    cmd_name = ds if len(files)==1 else '{0}_{1}'.format(os.path.splitext(os.path.basename(f1))[0],ds)
+                    cmd += f"    {cmd_name}_{x} = array(h5file['{ds}']['{x}'])\n"
+                    cmd += f"    {cmd_name}_{y} = array(h5file['{ds}']['{y}'])\n"
+                    cmd_plot.append({'x': f"{cmd_name}_{x}", 'y': f"{cmd_name}_{y}", 'label': f"{name}"})
+                    data.append( {'x': np.array(h5file[ds][x]), 'y': np.array(h5file[ds][y]), 'type': 'line', 'name': name} )
+    cmd += "fig,ax = subplots()\n"
+    for plot in cmd_plot:
+        cmd += "ax.plot({x},{y},label='{label}')\n".format(**plot)
+    cmd += f"ax.set_xlabel('{x}')\nax.set_ylabel('{y}')\nlegend()\n"
     title =  os.path.relpath(files[0],__data_dir__) + ' ' + ' '.join([os.path.basename(f) for f in files[1:]])
-    return {'data':data , 'layout' : {'title' : title , 'xaxis' : {'title': x}, 'yaxis' : { 'title':  y}}}
+    return {'data':data , 'layout' : {'title' : title , 'xaxis' : {'title': x}, 'yaxis' : { 'title':  y}}}, cmd
 
 @app.callback(Output('table','columns'),
               Output('table','data'),
@@ -190,4 +209,4 @@ def update_table(file_dataset):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)
