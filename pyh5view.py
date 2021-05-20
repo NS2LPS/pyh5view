@@ -19,8 +19,8 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
-#__data_dir__ = r'Z:\Topolux\Data'
-__data_dir__ = '/Users/jerome/Documents/Code/sandbox'
+__data_dir__ = r'Z:\Topolux\Data'
+#__data_dir__ = '/Users/jerome/Documents/Code/sandbox'
 
 def listdir(thedir):
     if thedir and os.path.isdir(thedir):
@@ -294,5 +294,5 @@ def update_table(file_dataset):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
-    #app.run_server(debug=False, host='0.0.0.0', port=5012)
+    #app.run_server(debug=True)
+    app.run_server(debug=False, host='0.0.0.0', port=5012)
