@@ -21,7 +21,7 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
-__data_dir__ = r'Z:\Topolux\Data'
+__data_dir__ = r'Y:\Data'
 #__data_dir__ = '/Users/jerome/Documents/Code/sandbox'
 
 @contextmanager
@@ -286,7 +286,7 @@ def update_fig(x, y, z, file_dataset, plot_type, file):
                     zdata[i] = hf[k[i]].attrs[z]
             title =  os.path.relpath(file,__data_dir__) 
             fname = os.path.splitext(os.path.basename(file))[0]
-            cmd = f"fig,ax = subplots()\n{fname}=loadh5('{file}')\nm=ax.pcolormesh({fname}.{x}[0],{fname}.{z},{fname}.{y})\n"
+            cmd = f"fig,ax = subplots()\n{fname}=loadh5(r'{file}')\nm=ax.pcolormesh({fname}.{x}[0],{fname}.{z},{fname}.{y},shading='nearest')\n"
             cmd += f"ax.set_xlabel('{x}')\nax.set_ylabel('{z}')\ncolorbar(m, label='{y}')"
             fig = go.Figure(data=go.Heatmap(x=xdata, y=zdata, z=ydata, type = 'heatmap', colorscale = 'Viridis', colorbar={"title": y}))
             fig.update_layout(title=title , xaxis_title=x, yaxis_title=z)
@@ -321,5 +321,5 @@ def update_table(file_dataset):
 
 
 if __name__ == '__main__':
-    #app.run_server(debug=True)
-    app.run_server(debug=False, host='0.0.0.0', port=5012)
+    app.run_server(debug=True)
+    #app.run_server(debug=False, host='0.0.0.0', port=5012)
