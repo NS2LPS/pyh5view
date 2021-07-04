@@ -244,7 +244,7 @@ def update_vars(file_dataset, prev_x, prev_y, prev_z, plot_type, file):
               )
 def update_fig(x, y, z, file_dataset, plot_type, file):
     if plot_type=='line':
-        if file_dataset is None or len(file_dataset)==0 or x is None or y is None:
+        if file_dataset is None or len(file_dataset)==0 or y is None:
             return {'data':[{'x': [], 'y': [], 'type': 'line', 'name': None}] , 'layout' : {'title' : '' , 'xaxis' : {'title': ''}, 'yaxis' : { 'title':  ''}}}, ""
         file_dataset = [json.loads(f) for f in file_dataset]
         data = []
@@ -258,27 +258,32 @@ def update_fig(x, y, z, file_dataset, plot_type, file):
                     if f1==f2:
                         name = ds if len(files)==1 else '{0} {1}'.format(os.path.splitext(os.path.basename(f1))[0],ds)
                         cmd_name = ds if len(files)==1 else '{0}_{1}'.format(os.path.splitext(os.path.basename(f1))[0],ds)
-                        cmd += f"    {cmd_name}_{x} = array(hf['{ds}']['{x}'])\n"
                         cmd += f"    {cmd_name}_{y} = array(hf['{ds}']['{y}'])\n"
-                        cmd_plot.append({'x': f"{cmd_name}_{x}", 'y': f"{cmd_name}_{y}", 'label': f"{name}"})
-                        data.append( {'x': np.array(hf[ds][x]), 'y': np.array(hf[ds][y]), 'type': 'line', 'name': name} )
+                        cmd += f"    {cmd_name}_x = arange(len({cmd_name}_{y}))\n" if x is None else f"    {cmd_name}_{x} = array(hf['{ds}']['{x}'])\n"
+                        if x is None:
+                            cmd_plot.append({'x': f"{cmd_name}_x", 'y': f"{cmd_name}_{y}", 'label': f"{name}"})
+                            data.append( {'x': np.arange(len(hf[ds][y])), 'y': np.array(hf[ds][y]), 'type': 'line', 'name': name} )
+                        else:
+                            cmd_plot.append({'x': f"{cmd_name}_{x}", 'y': f"{cmd_name}_{y}", 'label': f"{name}"})
+                            data.append( {'x': np.array(hf[ds][x]), 'y': np.array(hf[ds][y]), 'type': 'line', 'name': name} )
         cmd += "fig,ax = subplots()\n"
         for plot in cmd_plot:
             cmd += "ax.plot({x},{y},label='{label}')\n".format(**plot)
         title =  os.path.relpath(files[0],__data_dir__) + ' ' + ' '.join([os.path.basename(f) for f in files[1:]])
         #cmd += f"ax.set_xlabel('{x}')\nax.set_ylabel('{y}')\nlegend()\nax.set_title(r'{title}')\nfig.tight_layout()"
-        cmd += f"ax.set_xlabel('{x}')\nax.set_ylabel('{y}')\nlegend()"
-        return {'data':data , 'layout' : {'title' : title , 'xaxis' : {'title': x}, 'yaxis' : { 'title':  y}}}, cmd
+        cmd += f"ax.set_ylabel('{y}')\nlegend()" if x is None else f"ax.set_xlabel('{x}')\nax.set_ylabel('{y}')\nlegend()"
+        ret = {'data':data , 'layout' : {'title' : title, 'yaxis' : { 'title':  y}}} if x is None else {'data':data , 'layout' : {'title' : title , 'xaxis' : {'title': x}, 'yaxis' : { 'title':  y}}}
+        return ret, cmd
     else:
-        if file is None or x is None or y is None or z is None:
+        if file is None or y is None or z is None:
             return {'data':[{'x': [], 'y': [], 'type': 'line', 'name': None}] , 'layout' : {'title' : '' , 'xaxis' : {'title': ''}, 'yaxis' : { 'title':  ''}}}, ""
         else:
             with h5file(file,'r') as hf:
                 l = len(hf)
                 k = list(hf.keys())
                 ds0 = k[0]
-                xdata = np.array(hf[ds0][x])
                 y_ = np.array(hf[ds0][y])
+                xdata = np.arange(len(y_)) if x is None else np.array(hf[ds0][x])
                 ydata = np.empty((l,len(y_)),dtype=y_.dtype)
                 zdata = np.empty(l)
                 for i in range(l):
@@ -286,10 +291,15 @@ def update_fig(x, y, z, file_dataset, plot_type, file):
                     zdata[i] = hf[k[i]].attrs[z]
             title =  os.path.relpath(file,__data_dir__) 
             fname = os.path.splitext(os.path.basename(file))[0]
-            cmd = f"fig,ax = subplots()\n{fname}=loadh5(r'{file}')\nm=ax.pcolormesh({fname}.{x}[0],{fname}.{z},{fname}.{y},shading='nearest')\n"
-            cmd += f"ax.set_xlabel('{x}')\nax.set_ylabel('{z}')\ncolorbar(m, label='{y}')"
             fig = go.Figure(data=go.Heatmap(x=xdata, y=zdata, z=ydata, type = 'heatmap', colorscale = 'Viridis', colorbar={"title": y}))
-            fig.update_layout(title=title , xaxis_title=x, yaxis_title=z)
+            if x is None:
+                cmd = f"fig,ax = subplots()\n{fname}=loadh5(r'{file}')\nm=ax.pcolormesh(arange(len({fname}.{y}[0])),{fname}.{z},{fname}.{y},shading='nearest')\n"
+                cmd += f"ax.set_ylabel('{z}')\ncolorbar(m, label='{y}')"
+                fig.update_layout(title=title , yaxis_title=z)
+            else:
+                cmd = f"fig,ax = subplots()\n{fname}=loadh5(r'{file}')\nm=ax.pcolormesh({fname}.{x}[0],{fname}.{z},{fname}.{y},shading='nearest')\n"
+                cmd += f"ax.set_xlabel('{x}')\nax.set_ylabel('{z}')\ncolorbar(m, label='{y}')"
+                fig.update_layout(title=title , xaxis_title=x, yaxis_title=z)
             return fig, cmd
 
 
